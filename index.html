@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>设计师工作站</title>
-<script>WORKBENCH_VERSION='v26-2026-09-16';</script>
+<script>WORKBENCH_VERSION='v27-2026-09-16';</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--brand:#2f6b4f;--brand-d:#26563f;--brand-soft:#e7efea;--bg:#f7f7f5;--card:#ffffff;--line:#e8e8e4;--ink:#1f2320;--mut:#7a7d78;--ok:#2e7d32;--warn:#c2573d;--accent:#2f6b4f;--accent-soft:#e7efea;--radius:8px;--radius-lg:10px;--shadow-card:0 1px 3px rgba(0,0,0,.04);--font:"Microsoft YaHei UI","Microsoft YaHei","PingFang SC",sans-serif}
@@ -1219,7 +1219,7 @@ table.q input:focus{box-shadow:0 0 0 3px rgba(47,107,79,.18)}
 <div id="verTip" style="display:none"></div>
 <div id="legacyTip" style="display:none"></div>
 <div id="topbar" class="wb-top">
-  <div class="logo wb-brand"><span class="wb-dot"></span>三合装饰 · 设计师工作站<span id="verBadge" class="wb-ver"></span></div><span id="saveLamp" class="save-lamp" title="自动保存状态"></span>
+  <div class="logo wb-brand"><span class="wb-dot"></span><span id="wbTitle">设计师工作台</span></div><span id="saveLamp" class="save-lamp" title="自动保存状态"></span>
   <span id="acctBadge" class="acct-badge" style="display:none"></span>
   <div class="sp"></div>
   <span id="topUiPills" class="wb-pills"></span>
@@ -1424,7 +1424,7 @@ var LS_HOUSETYPE='';
 function companyGet(){
   try{var s=localStorage.getItem(LS_SET);if(s){var d=JSON.parse(s);if(d&&d.company&&d.company.name)return {name:d.company.name,phone:d.company.phone||'',addr:d.company.addr||''};}}catch(e){}
   try{var s2=localStorage.getItem(LS_COM);if(s2)return JSON.parse(s2);}catch(e){}
-  return {name:'三合装饰',phone:'',addr:''};
+  return {name:'',phone:'',addr:''};
 }
 function companySave(o){try{localStorage.setItem(LS_COM,JSON.stringify(o));}catch(e){}}
 function openCompanyModal(){
@@ -2855,7 +2855,7 @@ function getSetting(key,def){
   if(m&&o[m[0]]&&o[m[0]][m[1]]!==undefined)return o[m[0]][m[1]];
   return def;
 }
-const DEFAULT_SETTINGS={companyName:'三合装饰',companyPhone:'',companyAddress:'',defaultDesigner:'',logo:'',ownerName:'设计师',paperSize:'A4横版',fontSize:12,printLogo:true,footerText:'三合装饰·品质家装',manageRate:10,garbageFee:200,protectFee:1000,taxRate:3.41,payNode1Rate:45,payNode2Rate:45,payNode3Rate:10,waterRate:60};
+const DEFAULT_SETTINGS={companyName:'',companyPhone:'',companyAddress:'',defaultDesigner:'',logo:'',ownerName:'设计师',paperSize:'A4横版',fontSize:12,printLogo:true,footerText:'',manageRate:10,garbageFee:200,protectFee:1000,taxRate:3.41,payNode1Rate:45,payNode2Rate:45,payNode3Rate:10,waterRate:60};
 function resetSettings(){
   var b=setDef();
   b.company.name=DEFAULT_SETTINGS.companyName;
@@ -2920,8 +2920,8 @@ function resetSettingsConfirm(){
 }
 function setDef(){
   return {
-    company:{name:'三合装饰',phone:'',addr:'',designer:'',logo:'',ownerName:'设计师'},
-    print:{paper:'A4横版',fontSize:12,printLogo:true,footer:'三合装饰 · 品质家装',clientHideGather:true},
+    company:{name:'',phone:'',addr:'',designer:'',logo:'',ownerName:'设计师'},
+    print:{paper:'A4横版',fontSize:12,printLogo:true,footer:'',clientHideGather:true},
     defaults:{mgmtRate:10,trashFee:200,protectFee:1000,pay1:45,pay2:45,pay3:10,taxRate:3.41,wpHeight:2.0,tileH:2.4,drWrap:1,drPlain:0.5,wdCut:0.5,waterRate:60},
     data:{autoSave:true},
     ui:{theme:'warm',density:'std'}
@@ -2952,14 +2952,24 @@ function setSave(){try{localStorage.setItem(LS_SET,JSON.stringify(_setCache||set
 function onSet(g,k,v){var o=setLoad();o[g][k]=v;setSave();if(g==='company')syncCom();}
 function onSetNum(g,k,v){var o=setLoad();o[g][k]=parseFloat(v)||0;setSave();if(g==='company')syncCom();}
 function onSetBool(g,k,v){var o=setLoad();o[g][k]=!!v;setSave();if(g==='company')syncCom();}
-function syncCom(){var o=setLoad();companySave({name:o.company.name,phone:o.company.phone,addr:o.company.addr});}
+function syncCom(){var o=setLoad();companySave({name:o.company.name,phone:o.company.phone,addr:o.company.addr});v27TitleUpd();}
+function copyVer(){try{navigator.clipboard.writeText(String(WORKBENCH_VERSION));showToast('版本号已复制',1500);}catch(e){}}
+/* V27 工作台名跟随设置里的公司名（未填则显示"设计师工作台"） */
+function v27TitleUpd(){
+  var t=document.getElementById('wbTitle');
+  if(!t)return;
+  var nm='';try{nm=(setLoad().company&&setLoad().company.name)||'';}catch(e){}
+  t.textContent=(String(nm).trim())?String(nm).trim()+' · 设计师工作台':'设计师工作台';
+  document.title=(String(nm).trim())?String(nm).trim()+' · 设计师工作台':'设计师工作台';
+}
 function setLogoFile(inp){var f=inp.files[0];if(!f)return;var r=new FileReader();r.onload=function(){setLogo(r.result)};r.readAsDataURL(f);}
 function setLogo(dataUrl){var o=setLoad();o.company.logo=dataUrl||'';setSave();renderPanel();}
 function fldSet(g,k,label,val){return '<div class="fld"><label>'+label+'</label><input value="'+escAttr(val==null?'':val)+'" oninput="onSet(\''+g+'\',\''+k+'\',this.value)"></div>';}
 function paperOpt(cur){var a=['A4横版','A4竖版','A3横版'];var s='';a.forEach(function(p){s+='<option '+(p===cur?'selected':'')+'>'+p+'</option>'});return s;}
 function settingsHtml(){
   var o=setLoad();
-  var h='<div class="bar noprint"><span class="hint">设置修改即时保存。公司信息与打印抬头共用；默认参数将用于后续阶段的报价与结算模块；Logo 用于正式打印版式。</span></div>';
+  var h='<div class="bar noprint"><span class="hint">设置修改即时保存。公司信息与打印抬头共用；默认参数将用于后续阶段的报价与结算模块；Logo 用于正式打印版式。</span>'
+    +'<span style="margin-left:auto;font-size:12px;color:var(--mut)">版本：'+esc(WORKBENCH_VERSION)+'<button class="btn mini" style="margin-left:8px" onclick="copyVer()">复制</button></span></div>';
   /* 分组1 公司信息 */
   h+='<div class="card v13set" data-g="company"><h4>公司信息</h4><div class="grid2">'
     +fldSet('company','name','公司名称',o.company.name)
@@ -3026,7 +3036,7 @@ function settingsHtml(){
     +'<div class="fld"><label>自动保存</label><label class="setchk"><input type="checkbox" '+(o.data.autoSave!==false?'checked':'')+' onchange="onSetBool(\'data\',\'autoSave\',this.checked)"> 开启自动保存（修改数据 3 秒后自动存盘，顶部状态灯提示）</label></div>'
     +'<div class="fld"><label>上次备份时间</label><div class="usagenote" id="v14LastBak">'+(o.data.backupTime?escAttr(o.data.backupTime):'从未备份')+'</div></div>'
     +'<div class="fld"><label>立即备份</label><div class="btnrow"><button class="btn brand" onclick="v14BackupNow()">⬇ 备份到文件</button></div><span class="qnum">备份 = 导出全量数据（客户/定额库/户型库）为 JSON 文件，请选择保存位置保存。</span></div>'
-    +'<div class="fld"><label>恢复默认设置</label><div class="btnrow"><button class="btn" onclick="resetSettingsConfirm()">↺ 恢复默认设置</button></div><span class="qnum">将公司信息/打印模板/默认参数全部恢复为出厂默认值（管理费率10%、垃圾清运费200元、成品保护费1000元、税率3.41%、收款节点45/45/10、字号12px、页脚“三合装饰·品质家装”）。</span></div>'
+    +'<div class="fld"><label>恢复默认设置</label><div class="btnrow"><button class="btn" onclick="resetSettingsConfirm()">↺ 恢复默认设置</button></div><span class="qnum">将公司信息/打印模板/默认参数全部恢复为出厂默认值（管理费率10%、垃圾清运费200元、成品保护费1000元、税率3.41%、收款节点45/45/10、字号12px）。</span></div>'
     +'<div class="fld"><label>危险操作</label><div class="btnrow"><button class="btn danger" onclick="setClearData()">🗑 清除全部客户数据</button></div><span class="qnum">导出可将数据迁移到其它电脑；清除将删除全部客户/报价/工地/收款/选材数据，不可恢复（保留设置、模板库、公司抬头）。</span></div>'
     +'</div></div>';
   /* 账户数据（v22.1 M7）：列出同一浏览器里其他账户库，可切换 */
@@ -3202,7 +3212,7 @@ function getOwnerName(){
 /* ===== v18 阶段11：测试客户 c_demo（空库自动生成） ===== */
 function mkDemoCustomer(){
   var c=mkCust();
-  c.id='c_demo';c.name='测试客户（样板间）';c.addr='三合装饰示例 · 三室两厅一厨两卫';c.area=88;
+  c.id='c_demo';c.name='测试客户（样板间）';c.addr='示例楼盘 · 三室两厅一厨两卫';c.area=88;
   var areaMap={客餐厅:33,主卧:15,次卧:12,'次卧2':10,主卫:4.5,次卫:3.8,厨房:5,阳台:4};
   var perMap={客餐厅:32,主卧:16,次卧:14,'次卧2':13,主卫:9,次卫:8.5,厨房:9,阳台:7};
   var rooms=mkCustRooms({area:88,ktSplit:'merge',bd:3,bath:2,kc:1,yt:1});
@@ -3757,7 +3767,7 @@ function v14BackupNow(){
   data.huxing=(function(){try{return JSON.parse(localStorage.getItem(LS_HX)||'[]');}catch(e){return [];}})();
   var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   var a=document.createElement('a');
-  var fname='三合装饰数据备份_'+todayStr()+'.json';
+  var fname=(setLoad().company&&setLoad().company.name?setLoad().company.name:'工作台')+'数据备份_'+todayStr()+'.json';
   a.href=URL.createObjectURL(blob);a.download=fname;
   document.body.appendChild(a);a.click();
   setTimeout(function(){URL.revokeObjectURL(a.href);if(a.parentNode)a.parentNode.removeChild(a);},800);
@@ -4155,7 +4165,7 @@ function settleAdjField(ai,f,v){
 }
 function settlePrint(){
   var c=cur();var t=settleCalc(c);var s=c.settlement;
-  var o=setLoad();var co=o.company||{};var nm=co.name||'三合装饰';
+  var o=setLoad();var co=o.company||{};var nm=co.name||'装饰公司';
   var body='<div class="wm">'+esc(nm)+'·结算单专用</div>';
   body+='<div class="phead"><div class="ph-name">'+esc(nm)+'</div>'
     +'<div class="ph-line">'+(co.phone?esc(co.phone):'')+(co.phone&&co.addr?'　·　':'')+(co.addr?esc(co.addr):'')+'</div>'
@@ -4612,8 +4622,8 @@ function addonPrint(id){
   var c=cur();var a=addonFind(id);if(!a)return;
   var sum=addonCalcTotal(a);
   var co=companyGet();
-  var body='<div class="wm">三合装饰·增项报价专用</div>';
-  body+='<div class="phead"><div class="ph-name">'+esc(co.name||'三合装饰')+'</div>'
+  var body='<div class="wm">'+esc((co.name||'装饰公司'))+'·增项报价专用</div>';
+  body+='<div class="phead"><div class="ph-name">'+esc(co.name||'装饰公司')+'</div>'
     +'<div class="ph-title">增项单：'+esc(a.name)+'　｜　客户：'+esc(c.name||'')+(c.addr?'　｜　'+esc(c.addr):'')+'</div></div>';
   body+='<div class="hint" style="padding:4px 0">增项原因：'+esc(a.reason||'—')+'　　创建日期：'+esc(a.date||'')+'　　状态：'+esc(a.status)+'</div>';
   body+='<table class="q"><tr><th style="width:4%">#</th><th style="width:26%">项目名称</th><th style="width:8%">单位</th><th style="width:11%">数量</th><th style="width:12%">单价</th><th style="width:13%">合价</th><th style="width:26%">说明</th></tr>';
@@ -4623,7 +4633,7 @@ function addonPrint(id){
   body+='<tr class="sum"><td colspan="5">增项合计</td><td>'+fmt(sum)+'</td><td></td></tr></table>';
   body+='<div class="hint" style="padding:8px 0;color:#c0392b">客户签字确认后本增项单生效，并计入总报价。</div>';
   body+='<div class="psign"><div class="psig">甲方（业主）确认签字：＿＿＿＿＿＿＿＿　日期：＿＿＿＿＿＿</div>'
-    +'<div class="psig">乙方（三合装饰）签字：＿＿＿＿＿＿＿＿　日期：＿＿＿＿＿＿</div></div>';
+    +'<div class="psig">乙方签字：＿＿＿＿＿＿＿＿　日期：＿＿＿＿＿＿</div></div>';
   document.getElementById('pvBody').innerHTML=body;
   var pv=document.getElementById('pvLayer');
   pv.classList.add('open');document.body.style.overflow='hidden';pv.scrollTop=0;
@@ -5061,7 +5071,7 @@ function createCustomer(){
 /* ---- 打印预览 ---- */
 function printHead(c){
   var o=setLoad();var co=o.company||{};var pr=o.print||{};
-  var nm=co.name||'三合装饰';
+  var nm=co.name||'装饰公司';
   var h='<div class="phead"><div style="display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap">';
   if(pr.printLogo&&co.logo){h+='<img src="'+co.logo+'" style="max-height:64px;max-width:180px" alt="logo">';}
   h+='<div><div class="ph-name">'+esc(nm)+'</div>'
@@ -5070,7 +5080,7 @@ function printHead(c){
   return h;
 }
 function printSign(){
-  var o=setLoad();var co=o.company||{};var nm=co.name||'三合装饰';
+  var o=setLoad();var co=o.company||{};var nm=co.name||'装饰公司';
   return '<div class="v14-greet">感谢您选择 '+esc(nm)+'，本报价单有效期30天。</div>'
     +'<div class="psign">'
     +'<div class="psig">客户签字：＿＿＿＿＿＿＿＿　日期：＿＿＿＿＿＿</div>'
@@ -5083,7 +5093,7 @@ function openPrint(kind){
   var o=setLoad();var pr=o.print||{};var co=o.company||{};
   if(kind==='quote')ensureQuoteNo(c);
   var fs=(parseFloat(pr.fontSize)||12);
-  var body='<div class="wm">'+esc((co.name||'三合装饰'))+'·报价专用</div>';
+  var body='<div class="wm">'+esc((co.name||'装饰公司'))+'·报价专用</div>';
   body+='<div class="noprint" style="padding:4px 0 8px;color:#888;font-size:12px">提示：打印时请在浏览器打印设置中勾选「页眉和页脚」，以便在纸张上显示页码。</div>';
   body+='<div style="font-size:'+fs+'px">';
   if(kind==='quote')body+=printHead(c)+qHtml(c)+'<div style="height:20px"></div>'+printSign();
@@ -7808,7 +7818,7 @@ function importQuoteXlsx(input){
         var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:''});
         var c=cur();
         var parsed=parseQuoteRows(rows);
-        if(!parsed){alert('未识别到报价表结构：请上传「三合装饰」标准报价表（含「序号|项目名称|单位|数量|单价|合价」表头）或本工作台导出的表格。');input.value='';return;}
+        if(!parsed){alert('未识别到报价表结构：请上传本站标准报价表（含「序号|项目名称|单位|数量|单价|合价」表头）或本工作台导出的表格。');input.value='';return;}
         var secArr=function(sec){return (sec==='base')?c.base:c.mate};
         var diffs=[],newParts=[],matchCnt=0;
         function findPart(sec,pn){
@@ -8504,7 +8514,7 @@ function buildClientOnePage(c){
   if(!c)return '';
   recalc(c);
   var o=setLoad(),co=o.company||{},pr=o.print||{};
-  var nm=co.name||'三合装饰';
+  var nm=co.name||'装饰公司';
   var hideGather=(o.print&&o.print.clientHideGather!==false);
   var h='<div class="wm">'+esc(nm)+' · 客户报价专用</div>';
   h+='<div class="phead"><div style="display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap">'
@@ -8560,7 +8570,7 @@ function clientOnePage(){
 /* V22-3 增项确认单（静态 HTML，交付包/打印共用） */
 function buildAddonSheetHtml(c,a){
   var sum=addonCalcTotal(a);
-  var co=companyGet(),nm=co.name||'三合装饰';
+  var co=companyGet(),nm=co.name||'装饰公司';
   var body='<div class="wm">'+esc(nm)+' · 增项确认单</div>';
   body+='<div class="phead"><div class="ph-name">'+esc(nm)+'</div>'
     +'<div class="ph-title">增项确认单　｜　客户：'+esc(c.name||'')+(c.addr?'　｜　'+esc(c.addr):'')+(c.quoteNo?'　｜　报价单号：'+esc(c.quoteNo):'')+'</div></div>';
@@ -8601,7 +8611,7 @@ function buildSettleSheet(c){
   recalc(c);
   var t=settleCalc(c);
   var s=c.settlement=c.settlement||{status:'未结算',date:null,original:0,addon:0,deduct:0,adjustments:[],final:0};
-  var co=companyGet(),nm=co.name||'三合装饰';
+  var co=companyGet(),nm=co.name||'装饰公司';
   var sumDue=0,sumPaid=0;
   (c.payments||[]).forEach(function(p){sumDue+=payNodeAmt(c,p);sumPaid+=payPaidOf(p);});
   var body='<div class="wm">'+esc(nm)+' · 竣工结算单</div>';
@@ -8690,7 +8700,7 @@ function savePackageZip(zipBlob,fname,files){
     showToast(msg,3200);
     files.forEach(function(f){downloadBlob(new Blob([f.data],{type:'application/octet-stream'}),f.name);});
     var mf=files.map(function(f){return f.name+'  ('+f.data.length+' B)'}).join('\r\n');
-    downloadBlob(new Blob(['# 三合装饰 · 个人工作台千问产出 交付包\\r\\n生成时间：'+new Date().toLocaleString('zh-CN')+'\\r\\n共 '+files.length+' 个文件（本清单为回退模式逐文件下载的 manifest）\\r\\n\\r\\n'+mf],{type:'text/plain;charset=utf-8'}),'manifest.txt');
+    downloadBlob(new Blob(['# 工作台交付包\\r\\n生成时间：'+new Date().toLocaleString('zh-CN')+'\\r\\n共 '+files.length+' 个文件（本清单为回退模式逐文件下载的 manifest）\\r\\n\\r\\n'+mf],{type:'text/plain;charset=utf-8'}),'manifest.txt');
   }
   if(window.showSaveFilePicker){
     showSaveFilePicker({suggestedName:fname,startIn:'downloads',types:[{description:'ZIP 交付包',accept:{'application/zip':['.zip']}}]})
@@ -8892,7 +8902,7 @@ function v26WizImport(input){
         var bc=0,mc=0,gc=(pd.gather||[]).length;
         (pd.base||[]).forEach(function(p){bc+=(p.rows||[]).length;});
         (pd.mate||[]).forEach(function(p){mc+=(p.rows||[]).length;});
-        if(!bc&&!mc){alert('未识别到报价表结构：请上传「三合装饰」标准报价表（含「序号|项目名称|单位|数量|单价|合价」表头）。');window._xlsxData=null;return;}
+        if(!bc&&!mc){alert('未识别到报价表结构：请上传本站标准报价表（含「序号|项目名称|单位|数量|单价|合价」表头）。');window._xlsxData=null;return;}
         window._xlsxData=pd;
         var src=document.getElementById('nc_src');if(src)src.value='__blank';
         var info=document.getElementById('nc_xinfo');
@@ -9033,7 +9043,7 @@ function wzDone(){
   _ACCT={account:acct,name:(sess&&sess.name)||'设计师',role:'user'};
   applyAccountKeys(_ACCT.account);
   updAcctBar();
-  var vb=document.getElementById('verBadge');if(vb)vb.textContent=String(WORKBENCH_VERSION);
+  v27TitleUpd();
   var d=db();S=(d.customers[0]||{}).id;
   /* V25-6 恢复上次离开的位置：tab/客户/滚动 */
   var v25st=v25LoadState();
