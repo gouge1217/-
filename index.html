@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>设计师工作站</title>
-<script>WORKBENCH_VERSION='v25-2026-09-16';</script>
+<script>WORKBENCH_VERSION='v26-2026-09-16';</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--brand:#2f6b4f;--brand-d:#26563f;--brand-soft:#e7efea;--bg:#f7f7f5;--card:#ffffff;--line:#e8e8e4;--ink:#1f2320;--mut:#7a7d78;--ok:#2e7d32;--warn:#c2573d;--accent:#2f6b4f;--accent-soft:#e7efea;--radius:8px;--radius-lg:10px;--shadow-card:0 1px 3px rgba(0,0,0,.04);--font:"Microsoft YaHei UI","Microsoft YaHei","PingFang SC",sans-serif}
@@ -1194,7 +1194,11 @@ table.q .pheadin{padding-left:6px}
   table.q .phead td{border-left:3px solid #2f6b4f}
   table.q td.num.b-amt,table.q td.num.g-amt,.totalbar .tb .v{color:#2f6b4f!important}
 }
-/* V25-8 疏朗：全局间距节奏 + 空态温暖 + 输入聚焦光环 */
+/* V26-8 疏朗：全局间距节奏 + 空态温暖 + 输入聚焦光环 */
+.wz-mode{flex:1;border:1px solid var(--line);border-radius:10px;padding:10px 8px;cursor:pointer;text-align:center;font-size:13px;font-weight:600;background:#fff;transition:border-color .2s,background .2s}
+.wz-mode .wz-msub{font-weight:400;font-size:11px;color:var(--mut);margin-top:3px}
+.wz-mode.on{border-color:var(--accent);background:var(--accent-soft);color:#26563f}
+.wz-mode.on .wz-msub{color:#4c8f70}
 .card{margin-bottom:20px}
 #side{padding:18px 14px}
 .cust{margin-bottom:10px;border-radius:10px}
@@ -2157,6 +2161,7 @@ function qHtml(c){
   +'<button onclick="openTplModal()">📚 模板库</button>'
   +'<button onclick="v14ShowVersions()">🕘 报价版本</button>'
   +'<button onclick="v14CopyQuote()">📋 复制为新客户</button>'
+  +'<button onclick="v26BatchModal()">⚡ 批量改价</button>'
   +'<button onclick="undoHist()">↶ 撤销</button>'
   +'<button onclick="redoHist()">↷ 重做</button>'
   +'<button onclick="clearQuote()">🗑 清空报价</button>'
@@ -4876,6 +4881,98 @@ function ncSrcChange(){
   if(xw)xw.style.display=(v&&v!=='__rooms'&&v!=='__blank')?'block':'none';
 }
 /* v19检查通过：链路6 新建客户→报价单分区——按空间数量从 ROOM_TPL 取标配生成 base/mate 分区，命名符合 主卧/次卧/次卧2/主卫/次卫/厨房/阳台 规则，客餐厅按 merge/split/double 拆分 */
+/* V26-1 全套自动生成：以 DATA 标准配置单行集按空间标配组装（行数对齐真实报价） */
+function v26StdRooms(cfg){
+  var base=[],mate=[];
+  var BMap=[
+    ['一、水电项目','water'],['二、客餐厅','living'],['三、阳台','balcony'],
+    ['四、主卧','bd0'],['五、主卧卫生间','bath0'],['六、南次卧','bd1'],
+    ['七、北次卧','bd2'],['八、客卫','bath1'],['九、厨房','kitchen'],['十、其他项目','other']];
+  var MMap=[
+    ['一、客餐厅及过道','living'],['二、阳台','balcony'],['三、主卧','bd0'],
+    ['四、主卧卫生间','bath0'],['五、南次卧','bd1'],['六、北次卧','bd2'],
+    ['七、客卫','bath1'],['八、厨房','kitchen'],['九、其他','other'],
+    ['十、定制','custom'],['十一、窗帘','curtain']];
+  function pick(sec,key){
+    var map=(sec==='base')?BMap:MMap;
+    var src=(sec==='base')?DATA.base:DATA.mate;
+    for(var i=0;i<map.length;i++)if(map[i][1]===key)
+      for(var j=0;j<src.length;j++)if(src[j].t===map[i][0])return src[j];
+    return null;
+  }
+  function cln(part){
+    return ((part&&part.rows)||[]).map(function(it){
+      var u=it.u||'㎡';
+      /* V26-1 生成行单位校正：木门 个→樘；计量规则写"按米"的叠级线/边吊 ㎡→m（源配置单标注不一致） */
+      if(u==='个'&&/木门/.test(it.n||''))u='樘';
+      if(u==='㎡'&&/叠级线|边吊/.test(it.n||'')&&/按米/.test(it.g||''))u='m';
+      return {n:it.n,u:u,q:0,p:it.p||0,g:it.g||'',h:it.h||'',_src:'tpl',_calc:'',dingeId:String(it.dingeId||'')};
+    });
+  }
+  function addPart(label,bk,mk){
+    base.push({t:label,rows:cln(pick('base',bk))});
+    mate.push({t:label+'·主材',rows:cln(pick('mate',mk))});
+  }
+  var sp=cfg.ktSplit||'merge';
+  if(sp==='1plus1'){addPart('客厅','living','living');addPart('餐厅','living','living');}
+  else if(sp==='2plus2'){addPart('客厅','living','living');addPart('客厅2','living','living');addPart('餐厅','living','living');addPart('餐厅2','living','living');}
+  else{addPart('客餐厅','living','living');}
+  var bd=cfg.bd===undefined?3:cfg.bd;
+  for(var bi=0;bi<bd;bi++){
+    var lab=bi===0?'主卧':(bi===1?'次卧':'次卧'+bi);
+    var bk2=bi===0?'bd0':(bi===1?'bd1':'bd2');
+    addPart(lab,bk2,bk2);
+  }
+  var bath=cfg.bath===undefined?2:cfg.bath;
+  for(var vi=0;vi<bath;vi++){
+    var labv=vi===0?'主卫':(vi===1?'次卫':'卫生间'+(vi+1));
+    var bkv=vi===0?'bath0':'bath1';
+    addPart(labv,bkv,bkv);
+  }
+  var kc=cfg.kc===undefined?1:cfg.kc;
+  for(var ki=0;ki<kc;ki++)addPart(ki===0?'厨房':'厨房'+(ki+1),'kitchen','kitchen');
+  var yt=cfg.yt===undefined?1:cfg.yt;
+  for(var yi=0;yi<yt;yi++)addPart(yi===0?'阳台':'阳台'+(yi+1),'balcony','balcony');
+  base.push({t:'水电全房',rows:cln(pick('base','water'))});
+  base.push({t:'拆除新建',rows:cln(pick('base','other'))});
+  mate.push({t:'其他',rows:cln(pick('mate','other'))});
+  mate.push({t:'定制',rows:cln(pick('mate','custom'))});
+  mate.push({t:'窗帘',rows:cln(pick('mate','curtain'))});
+  return {base:base,mate:mate,gather:[]};
+}
+/* V26-1 数量自动：面积类按房间面积比例、米类按周长比例、块类按面积/单块、全房类按建筑面积、项类 1 */
+function v26FillQuant(b,m,cArea){
+  if(!(cArea>0))return;
+  var AR={客餐厅:.375,主卧:.170,次卧:.136,'次卧2':.114,主卫:.051,次卫:.043,厨房:.057,阳台:.045};
+  var PR={客餐厅:32/88,主卧:16/88,次卧:14/88,'次卧2':13/88,主卫:9/88,次卫:8.5/88,厨房:9/88,阳台:7/88};
+  function roomKey(t){
+    var s=String(t||'').replace(/·主材.*$/,'');
+    if(s.indexOf('客餐厅')>-1||s==='客厅'||s==='餐厅'||s==='客厅2'||s==='餐厅2')return '客餐厅';
+    if(s==='主卧')return '主卧';
+    if(s==='次卧'||s==='次卧2')return s;
+    if(s==='主卫')return '主卫';
+    if(s==='次卫'||s.indexOf('卫生间')>-1)return '次卫';
+    if(s.indexOf('厨房')>-1)return '厨房';
+    if(s.indexOf('阳台')>-1)return '阳台';
+    return '';
+  }
+  function fill(part){
+    var k=roomKey(part.t);
+    (part.rows||[]).forEach(function(r){
+      if(part.t==='水电全房'){r.q=Math.round(cArea*100)/100;return;}
+      if(part.t==='拆除新建'){r.q=1;return;}
+      var u=r.u||'';
+      if(u.indexOf('㎡')>=0||u.indexOf('平米')>=0){r.q=k&&AR[k]?Math.round(AR[k]*cArea*100)/100:1;}
+      else if(u==='m'||u==='延米'||u.indexOf('米')>=0){r.q=k&&PR[k]?Math.round(PR[k]*cArea*100)/100:2;}
+      else if(u.indexOf('块')>=0){
+        var sq=(/800\*800|800×800/.test(r.n))?0.64:(/400\*800|400×800/.test(r.n))?0.32:1;
+        r.q=k&&AR[k]?Math.max(1,Math.round(AR[k]*cArea/sq)):1;
+      }
+      else r.q=1;
+    });
+  }
+  (b||[]).forEach(fill);(m||[]).forEach(fill);
+}
 function mkCustRooms(cfg){
   var base=[],mate=[];
   function addRoom(label,key){
@@ -4921,13 +5018,15 @@ function createCustomer(){
   if(!name){alert('请填写客户姓名');return;}
   var src=document.getElementById('nc_src').value;
   var b,m,g,extXlsx=false;
-  if(src==='__rooms'){var rooms=mkCustRooms(_ncRooms);b=rooms.base;m=rooms.mate;g=rooms.gather;}
+  window._ncImported=false;
+  if(src==='__rooms'){var rooms=v26StdRooms(_ncRooms);b=rooms.base;m=rooms.mate;g=rooms.gather;}
   else if(src==='__blank'){b=[];m=[];g=[];}
   else if(window._xlsxData&&window._xlsxData.base){b=clone(window._xlsxData.base);m=clone(window._xlsxData.mate);g=clone(window._xlsxData.gather);extXlsx=true;}
   else if(src.indexOf('tpl')===0){var t=tplGet(src);if(t){b=clone(t.base);m=clone(t.mate);g=clone(t.gather);}else{b=clone(DATA.base);m=clone(DATA.mate);g=clone(DATA.gather);}}
   else{b=clone(DATA.base);m=clone(DATA.mate);g=clone(DATA.gather);}
+  if(extXlsx)window._ncImported=true;
   var cArea=parseFloat(document.getElementById('nc_area').value)||0;
-  if(src==='__rooms'&&cArea>0){for(var wi=0;wi<b.length;wi++){if(b[wi].t==='水电全房'&&b[wi].rows[0]){b[wi].rows[0].q=cArea;}}}
+  if(src==='__rooms'&&cArea>0){v26FillQuant(b,m,cArea);}
   if(cArea<=0){for(var wj=0;wj<b.length;wj++){if(b[wj].t==='水电全房'&&b[wj].rows){b[wj].rows=[];}}}
   applySettingsToGather(g,extXlsx?false:undefined);
   if(cArea<=0)showToast('请先在客户信息里填建筑面积，已跳过水电项目。');
@@ -5842,6 +5941,118 @@ function rcMenu(kind){
 function hintToggle(btn){
   var p=document.getElementById('hintPanel');
   if(p)p.style.display=p.style.display==='block'?'none':'block';
+}
+/* ===== V26-3 同类批量改价 ===== */
+function v26BatchModal(){
+  var c=cur();if(!c){showToast('请先选择客户',2000);return;}
+  var all=[];
+  (c.base||[]).forEach(function(p,pi){if(!p||!p.rows)return;p.rows.forEach(function(r,ri){all.push({sec:'base',pi:pi,ri:ri,part:p.t,name:r.n,u:r.u,q:r.q,p:r.p});});});
+  (c.mate||[]).forEach(function(p,pi){if(!p||!p.rows)return;p.rows.forEach(function(r,ri){all.push({sec:'mate',pi:pi,ri:ri,part:p.t,name:r.n,u:r.u,q:r.q,p:r.p});});});
+  var parts=[];
+  (c.base||[]).forEach(function(p,pi){parts.push({v:'base:'+pi,label:'基装 · '+p.t});});
+  (c.mate||[]).forEach(function(p,pi){parts.push({v:'mate:'+pi,label:'主材 · '+p.t});});
+  var h='<div style="max-height:70vh;overflow:auto">'
+   +'<div class="mrow"><label>范围</label>'
+   +'<select id="v26b_scope" onchange="v26bScope(this.value)">'
+   +'<option value="name">同项目名（全房同名）</option>'
+   +'<option value="part">同分区</option>'
+   +'<option value="pick">勾选行</option></select></div>'
+   +'<div class="mrow" id="v26b_name"><label>项目名</label><input id="v26b_kw" placeholder="如：一底两面刷漆" oninput="v26bPreview()"></div>'
+   +'<div class="mrow" id="v26b_part" style="display:none"><label>分区</label><select id="v26b_partsel" onchange="v26bPreview()">'+parts.map(function(p){return '<option value="'+p.v+'">'+esc(p.label)+'</option>';}).join('')+'</select></div>'
+   +'<div class="mrow" id="v26b_pick" style="display:none"><label>勾选</label><input id="v26b_pickkw" placeholder="先按关键词过滤行" oninput="v26bRenderPick()"></div>'
+   +'<div id="v26b_picklist" style="display:none;max-height:180px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:4px 8px;margin-bottom:6px"></div>'
+   +'<div id="v26b_preview" class="hint" style="margin:6px 0">匹配 0 行</div>'
+   +'<div class="mrow"><label>操作</label>'
+   +'<select id="v26b_op" onchange="document.getElementById(\'v26b_kmode\').style.display=(this.value===\'k\')?\'\':\'none\'"><option value="p">改单价</option><option value="q">改数量</option><option value="k">按系数调整</option></select></div>'
+   +'<div class="mrow"><label>值</label><input id="v26b_val" placeholder="如：8（改价）或 0.95（系数）" style="width:200px"></div>'
+   +'<div class="mrow" id="v26b_kmode" style="display:none"><label>系数作用</label><select id="v26b_ksel"><option value="p">单价 ×</option><option value="q">数量 ×</option><option value="both">单价+数量 ×</option></select></div>'
+   +'<div class="actions" style="margin-top:10px"><button class="btn" onclick="closeModal()">取消</button><button class="btn brand" onclick="v26bApply()">应用</button></div>'
+   +'</div>';
+  v14Modal('⚡ 批量改价',h,'560px');
+  window._v26b={all:all,c:c,scope:'name',sel:[]};
+  v26bPreview();
+}
+function v26bScope(v){
+  var st=window._v26b;if(!st)return;st.scope=v;
+  var nm=document.getElementById('v26b_name'),pt=document.getElementById('v26b_part'),pk=document.getElementById('v26b_pick'),pl=document.getElementById('v26b_picklist');
+  if(nm)nm.style.display=(v==='name')?'':'none';
+  if(pt)pt.style.display=(v==='part')?'':'none';
+  if(pk)pk.style.display=(v==='pick')?'':'none';
+  if(pl)pl.style.display=(v==='pick')?'':'none';
+  v26bPreview();
+}
+function v26bMatched(){
+  var st=window._v26b;if(!st)return [];
+  if(st.scope==='name'){
+    var kw='';try{kw=document.getElementById('v26b_kw').value.trim();}catch(e){}
+    if(!kw)return [];
+    var kk=normCore(kw);
+    return st.all.filter(function(x){var nx=normCore(x.name||'');return kk&&(nx.indexOf(kk)>-1||nx===kk);});
+  }
+  if(st.scope==='part'){
+    var pv='base:0';try{pv=document.getElementById('v26b_partsel').value;}catch(e){}
+    var ss=pv.split(':');
+    return st.all.filter(function(x){return x.sec===ss[0]&&x.pi===+ss[1];});
+  }
+  return st.sel.map(function(i){return st.all[i];});
+}
+function v26bPreview(){
+  var st=window._v26b;if(!st)return;
+  var pv=document.getElementById('v26b_preview');
+  if(pv)pv.textContent='匹配 '+(st.scope==='pick'?st.sel.length:v26bMatched().length)+' 行';
+}
+function v26bRenderPick(){
+  var st=window._v26b;if(!st)return;
+  var kw='';try{kw=document.getElementById('v26b_pickkw').value.trim();}catch(e){}
+  var kkw=kw?normCore(kw):'';
+  var list=[];
+  st.all.forEach(function(x,i){
+    if(kkw&&normCore(x.name||'').indexOf(kkw)<0)return;
+    list.push({i:i,x:x});
+  });
+  list=list.slice(0,80);
+  var h=list.map(function(o){
+    return '<label style="display:flex;align-items:center;gap:6px;padding:2px 0;font-size:12.5px"><input type="checkbox" '+(st.sel.indexOf(o.i)>-1?'checked':'')+' onchange="v26bPick('+o.i+',this.checked)"> '+esc(o.x.part)+' · '+esc(o.x.name)+'（'+esc(o.x.u)+'）</label>';
+  }).join('');
+  var pl=document.getElementById('v26b_picklist');
+  if(pl)pl.innerHTML=h||'<div class="hint">无匹配行</div>';
+  v26bPreview();
+}
+function v26bPick(i,on){
+  var st=window._v26b;if(!st)return;
+  var at=st.sel.indexOf(i);
+  if(on&&at<0)st.sel.push(i);
+  if(!on&&at>-1)st.sel.splice(at,1);
+  v26bPreview();
+}
+function v26bApply(){
+  var st=window._v26b;if(!st||!st.c)return;
+  var rows=v26bMatched();
+  if(!rows.length){showToast('没有匹配的行',2000);return;}
+  var op='p';try{op=document.getElementById('v26b_op').value;}catch(e){}
+  var val=parseFloat(document.getElementById('v26b_val').value);
+  if(isNaN(val)){showToast('请填写数值',2000);return;}
+  var ksel='p';try{ksel=document.getElementById('v26b_ksel').value;}catch(e){}
+  pushHist();
+  var updated=0;
+  rows.forEach(function(r){
+    var row=null;
+    if(r.sec==='base'&&st.c.base[r.pi]&&st.c.base[r.pi].rows[r.ri])row=st.c.base[r.pi].rows[r.ri];
+    else if(r.sec==='mate'&&st.c.mate[r.pi]&&st.c.mate[r.pi].rows[r.ri])row=st.c.mate[r.pi].rows[r.ri];
+    if(!row)return;
+    if(op==='p'){row.p=val;if(row._p_disp)delete row._p_disp;}
+    else if(op==='q'){row.q=val;}
+    else if(op==='k'){
+      if(ksel==='q'){row.q=(typeof row.q==='number')?row.q*val:val;}
+      else if(ksel==='both'){row.p=val*row.p;if(row._p_disp)delete row._p_disp;row.q=(typeof row.q==='number')?row.q*val:val;}
+      else{row.p=val*row.p;if(row._p_disp)delete row._p_disp;}
+    }
+    updated++;
+  });
+  recalc(st.c);
+  v14CreateVersion(st.c,'批量改价');
+  save();renderPanel();closeModal();
+  showToast('已更新 '+updated+' 行',2200);
 }
 function rcOpenCheck(sel){
   if(sel&&sel.value){var v=sel.value;sel.value='';}
@@ -8650,6 +8861,63 @@ function wzHuxing(v){
   else{return;}
   wzRenderRooms();
 }
+/* V26-2 统一解析：以 parseQuoteRows（实测 86/138 行正确）为唯一解析链，输出分区结构 */
+function v26ParseWbToCust(wb){
+  var out={base:[],mate:[],gather:[]};
+  (wb.SheetNames||[]).forEach(function(sn){
+    var ws=wb.Sheets[sn];if(!ws)return;
+    var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:''});
+    var flat=parseQuoteRows(rows);
+    if(!flat)return;
+    flat.forEach(function(p){
+      if(p.sec==='gather'){out.gather.push({n:p.name,u:p.u,q:p.q,p:p.p,g:p.g,h:p.h||''});return;}
+      var dst=(p.sec==='mate')?out.mate:out.base;
+      var part=null;
+      for(var i=0;i<dst.length;i++){if(dst[i].t===p.part){part=dst[i];break;}}
+      if(!part){part={t:p.part||'其他',rows:[]};dst.push(part);}
+      part.rows.push({n:p.name,u:p.u,q:p.q,p:p.p,g:p.g,h:p.h});
+    });
+  });
+  return out;
+}
+/* V26-2 向导导入（统一解析 + 识别统计信息条） */
+function v26WizImport(input){
+  var file=input.files[0];if(!file)return;
+  loadXlsxLib(function(){
+    var rd=new FileReader();
+    rd.onload=function(){
+      try{
+        var wb=XLSX.read(new Uint8Array(rd.result),{type:'array'});
+        var pd=v26ParseWbToCust(wb);
+        var bc=0,mc=0,gc=(pd.gather||[]).length;
+        (pd.base||[]).forEach(function(p){bc+=(p.rows||[]).length;});
+        (pd.mate||[]).forEach(function(p){mc+=(p.rows||[]).length;});
+        if(!bc&&!mc){alert('未识别到报价表结构：请上传「三合装饰」标准报价表（含「序号|项目名称|单位|数量|单价|合价」表头）。');window._xlsxData=null;return;}
+        window._xlsxData=pd;
+        var src=document.getElementById('nc_src');if(src)src.value='__blank';
+        var info=document.getElementById('nc_xinfo');
+        if(info){
+          info.style.display='flex';
+          info.innerHTML='<label></label><span style="color:var(--ok);font-size:13px">✓ 已识别 '+bc+' 条基装 + '+mc+' 条主材 + '+gc+' 条综合（共 '+(bc+mc+gc)+' 项）</span>';
+        }
+        showToast('已解析报价表：基装 '+bc+' / 主材 '+mc+' / 综合 '+gc,2500);
+      }catch(e){alert('Excel 解析失败：'+e.message);window._xlsxData=null;}
+    };
+    rd.readAsArrayBuffer(file);
+  });
+}
+/* V26-2 向导第一步 3 选 1 主入口 */
+function wzModeSel(el){
+  document.querySelectorAll('#wz_mode .wz-mode').forEach(function(x){x.classList.remove('on');});
+  el.classList.add('on');
+  var v=el.getAttribute('data-v');
+  var src=document.getElementById('nc_src');
+  if(src){src.value=(v==='__xlsx')?'__blank':v;ncSrcChange();}
+  if(v==='__xlsx'){
+    var fi=document.getElementById('nc_xlsx2');
+    if(fi)fi.click();
+  }
+}
 function openNewWizard(){
   var draft=null;try{draft=JSON.parse(localStorage.getItem(wzDraftKey())||'null');}catch(e){}
   WZ={step:1};
@@ -8670,6 +8938,12 @@ function openNewWizard(){
     +'<div class="mrow"><label>楼盘·工程地址</label><input id="nc_addr" value="'+(draft&&draft.addr?escAttr(draft.addr):'')+'"></div>'
     +'<div class="mrow"><label>建筑面积㎡ <b style="color:var(--danger)">*</b></label><input id="nc_area" type="number" placeholder="㎡" value="'+(draft&&draft.area!=null?escAttr(draft.area):'')+'"></div>'
     +'<div class="mrow"><label>户型</label>'+hx+'</div>'
+    +'<div style="display:flex;gap:8px;margin:6px 0 12px" id="wz_mode">'
+    +'<div class="wz-mode on" data-v="__rooms" onclick="wzModeSel(this)">按户型自动生成<div class="wz-msub">推荐 · 全套标准报价</div></div>'
+    +'<div class="wz-mode" data-v="__xlsx" onclick="wzModeSel(this)">从 Excel 导入<div class="wz-msub">识别已有报价表</div></div>'
+    +'<div class="wz-mode" data-v="__blank" onclick="wzModeSel(this)">空白开始<div class="wz-msub">从零搭建</div></div>'
+    +'</div>'
+    +'<input type="file" id="nc_xlsx2" accept=".xlsx,.xls" style="display:none">'
     +'<div class="mrow"><label>设计人</label><select id="nc_designer">'+wzDesignerOpts()+'</select></div>'
     +'<div class="mrow"><label>建档月份</label><input id="nc_month" type="month"></div>'
     +'<div class="mrow"><label>客户状态</label><select id="nc_status">'+stOpts('待跟进')+'</select></div>'
@@ -8690,7 +8964,9 @@ function openNewWizard(){
   document.getElementById('nc_month').value=(draft&&draft.month)||mm;
   if(draft){var er=document.getElementById('wz_err');er.style.display='block';er.textContent='已恢复上次草稿，可继续编辑或覆盖创建。';}
   var f=document.getElementById('nc_xlsx');
-  if(f)f.onchange=function(){v16ReadXlsx(f,function(ok){document.getElementById('nc_xinfo').style.display=ok?'':'none';});};
+  if(f)f.onchange=function(){v26WizImport(f);};
+  var f2=document.getElementById('nc_xlsx2');
+  if(f2)f2.onchange=function(){v26WizImport(f2);};
   wzRenderRooms();
   wzStep(1);
 }
@@ -8737,6 +9013,17 @@ function wzDone(){
   }
   try{localStorage.removeItem(wzDraftKey());}catch(e){}
   T='quote';renderPanel();
+  /* V26-2 导入后自动体检：有异常才提示，不打断 */
+  if(window._ncImported){
+    var cci=cur();
+    if(cci){
+      try{
+        var rci=runNumberCheck(cci);
+        var eNi=(rci.rep||[]).filter(function(x){return x.lv==='err';}).length;
+        if(eNi>0)showToast('报价表已导入，检测到 '+eNi+' 处数字问题，可在报价页「🔍 体检」查看。',3500);
+      }catch(e){}
+    }
+  }
 }
 /* init（v22：直接进入；读旧会话恢复称呼与数据键前缀，老数据零丢失） */
 (function(){
