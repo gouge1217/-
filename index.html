@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>设计师工作站</title>
-<script>WORKBENCH_VERSION='v29-2026-09-17';</script>
+<script>WORKBENCH_VERSION='v30-2026-09-17';</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--brand:#2f6b4f;--brand-d:#26563f;--brand-soft:#e7efea;--bg:#f7f7f5;--card:#ffffff;--line:#e8e8e4;--ink:#1f2320;--mut:#7a7d78;--ok:#2e7d32;--warn:#c2573d;--accent:#2f6b4f;--accent-soft:#e7efea;--radius:8px;--radius-lg:10px;--shadow-card:0 1px 3px rgba(0,0,0,.04);--font:"Microsoft YaHei UI","Microsoft YaHei","PingFang SC",sans-serif}
@@ -951,6 +951,8 @@ input[type="checkbox"],input[type="radio"]{width:20px;height:20px;accent-color:v
 #panel .mat td.ed input:focus{border-color:var(--v15-accent,#c9a96e);background:#fff;outline:none;box-shadow:0 0 0 3px rgba(201,169,110,.15)}
 #panel .mat tr.v15-mat-done td{background:#f2f9f3}
 #panel .mat tr.v15-mat-done td.ed input{color:var(--v15-success,#2e7d32)}
+/* V30-7 选材表输入框放大：字号≥14px、高度≥34px */
+#panel .mat td.ed input{font-size:14px;padding:6px 8px;min-height:34px}
 
 /* 信息表：附件上传 / 变更记录 / 户型库搜索 */
 #panel .filebox{display:flex;align-items:center;flex-wrap:wrap;gap:8px;background:var(--v15-bg,#f8f6f1);border:1px dashed var(--v15-border,#e5e0d5);border-radius:var(--v15-radius,12px);padding:10px 12px}
@@ -1197,6 +1199,11 @@ table.q .pheadin{padding-left:6px}
   table.q tr,table.q tr.sum{page-break-inside:avoid}
   table.q .phead td{border-left:3px solid #2f6b4f}
   table.q td.num.b-amt,table.q td.num.g-amt,.totalbar .tb .v{color:#2f6b4f!important}
+  /* V30-4 打印全展开：取消 sticky、工艺/计量整格展开、折叠体强制展开（仅打印生效，屏幕态不变） */
+  table.q tr.phead td{position:static!important}
+  table.q td.qcell-g textarea,table.q td.qcell-h textarea{white-space:pre-wrap!important;overflow:visible!important;height:auto!important;min-height:auto!important;max-height:none!important}
+  .v17-foldb{display:block!important}
+  .v17-foldh{display:none!important}
 }
 /* V26-8 疏朗：全局间距节奏 + 空态温暖 + 输入聚焦光环 */
 .wz-mode{flex:1;border:1px solid var(--line);border-radius:10px;padding:10px 8px;cursor:pointer;text-align:center;font-size:13px;font-weight:600;background:#fff;transition:border-color .2s,background .2s}
@@ -1219,6 +1226,11 @@ table.q input:focus{box-shadow:0 0 0 3px rgba(47,107,79,.18)}
 @media (min-width:1400px){#side{width:276px}}
 /* V28-3A 报价计算页大输入框 + 吊顶胶囊 + 汇总胶囊 */
 .calc-ip{height:42px;font-size:17px;border:1px solid var(--line);border-radius:8px;padding:8px 12px;width:100%;background:#fff;font-variant-numeric:tabular-nums}
+/* V30-3 个性化选项组内序号 */
+.v30-optno{display:inline-block;min-width:24px;font-weight:700;color:#8a6d3b;margin-right:4px}
+/* V30-6 导出专用干净容器：隐藏工具栏/操作列/导航（仅离屏导出节点生效，屏幕态不变） */
+.v30-export-clean .bar,.v30-export-clean .tools,.v30-export-clean .noprint{display:none!important}
+.v30-export-clean table.q tr.phead td{position:static!important}
 .calc-ip:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(47,107,79,.2)}
 .calc-ip:hover{border-color:var(--brand)}
 .cei-trigger{height:38px;min-width:120px;border:1px solid var(--accent);background:var(--accent-soft);color:#26563f;border-radius:20px;font-size:13px;font-weight:600;padding:0 14px;cursor:pointer;transition:background .2s}
@@ -5068,6 +5080,13 @@ function printSign(){
 }
 
 /* ===== V28-5.2 导出 PDF / 长图（内嵌 html2canvas，离线可用）；V29：自写 jpegToPdf 替代原 356KB PDF 库（→约60行） ===== */
+function v30ExportSrc(c){
+  var wrap=document.createElement('div');wrap.id='v30-export-fake';
+  wrap.style.cssText='position:absolute;left:-9999px;top:0;width:900px;background:#fff;padding:16px;';
+  wrap.className='v30-export-clean';
+  try{wrap.innerHTML=printHead(c)+qHtml(c);}catch(e){setTimeout(function(){try{wrap.remove();}catch(e2){}},0);return null;}
+  document.body.appendChild(wrap);return wrap;
+}
 function v29Snap(src,full){
   var opts={scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false};
   if(full){opts.windowWidth=src.scrollWidth;opts.windowHeight=src.scrollHeight;}
@@ -5119,7 +5138,7 @@ function jpegToPdf(pages,fileName){
 function v28ExportPdf(){
   var c=cur();if(!c){showToast('请先选择客户',2000);return;}
   showToast('正在生成 PDF…',2000);
-  var src=document.getElementById('panel');
+  var src=v30ExportSrc(c);if(!src)return;
   setTimeout(function(){
     try{
       v29Snap(src).then(function(canvas){
@@ -5135,14 +5154,15 @@ function v28ExportPdf(){
         }
         jpegToPdf(pages,(c.name||'客户')+'_报价单.pdf');
         showToast('PDF 已导出',2000);
-      }).catch(function(e){showToast('PDF 生成失败：'+e.message,3000);});
-    }catch(e){showToast('PDF 生成失败：'+e.message,3000);}
+        try{src.remove();}catch(e5){}
+      }).catch(function(e){try{src.remove();}catch(e5){}showToast('PDF 生成失败：'+e.message,3000);});
+    }catch(e){try{src.remove();}catch(e5){}showToast('PDF 生成失败：'+e.message,3000);}
   },80);
 }
 function v28ExportLong(){
   var c=cur();if(!c){showToast('请先选择客户',2000);return;}
   showToast('正在生成长图…',2500);
-  var src=document.getElementById('panel');
+  var src=v30ExportSrc(c);if(!src)return;
   setTimeout(function(){
     try{
       v29Snap(src,true).then(function(canvas){
@@ -5152,8 +5172,9 @@ function v28ExportLong(){
         document.body.appendChild(a);a.click();
         setTimeout(function(){a.remove();},500);
         showToast('长图已导出，可直接发微信',2500);
-      }).catch(function(e){showToast('长图生成失败：'+e.message,3000);});
-    }catch(e){showToast('长图生成失败：'+e.message,3000);}
+        try{src.remove();}catch(e5){}
+      }).catch(function(e){try{src.remove();}catch(e5){}showToast('长图生成失败：'+e.message,3000);});
+    }catch(e){try{src.remove();}catch(e5){}showToast('长图生成失败：'+e.message,3000);}
   },80);
 }
 function openPrint(kind){
@@ -6144,7 +6165,7 @@ function rcOpenCheck(sel){
 function plOpenCheck(){
   var _c0=cur();
   if(_c0&&_c0.flag==='biz'){showToast('商业/工装单已归档，不参与体检',2500);return;}
-  var c=plCheckData();if(!c)return;
+  var c=plCheckData();if(!c){showToast('暂无可体检的数据：请先为客户生成户型/报价后重试',2500);return;}
   var miss=plCheckRun();
   var must=miss.filter(function(m){return m.kind==='must';});
   var chain=miss.filter(function(m){return m.kind==='chain';});
@@ -8129,10 +8150,10 @@ function calcHtml(c){
     +'<div class="hint">只需提供：<b>①每个空间面积/周长</b>（面积用于地面/吊顶/防水，周长用于踢脚线/墙面）→ <b>②地面材料</b>（地砖/木地板）→ <b>③吊顶</b>（每空间点「＋吊顶」从定额库选，选了才生成）→ <b>④柜子投影面积</b>（输入了才生成）→ <b>⑤材料单价</b>（可从定额下拉自动带价）→ <b>⑥个性化选项</b>。系统自动生成报价，可一键写入当前客户报价单（只增不删、保留手改单价）。</div></div>';
   h+='<div class="card"><div class="v17-foldh" onclick="calcToggleFold(\'cust\')"><span>📋 客户信息（用于报价单抬头）</span><span class="v17-foldicon">'+(d.fold.cust?'▼ 收起':'▲ 展开')+'</span></div>'
     +'<div class="v17-foldb"'+(d.fold.cust?'':' style="display:none"')+'><div class="wb-vcol">'
-    +'<label>客户姓名 <input style="width:130px" value="'+esc(d.name)+'" oninput="calcSet(\'name\',this.value)"></label>'
-    +'<label>建筑面积(㎡) <input style="width:90px" value="'+esc(d.area)+'" oninput="calcSet(\'area\',this.value)"></label>'
-    +'<label>设计师 <input style="width:110px" value="'+esc(d.designer)+'" oninput="calcSet(\'designer\',this.value)"></label>'
-    +'<label>层高(米) <input style="width:70px" value="'+esc(d.height)+'" oninput="calcSet(\'height\',this.value)"></label>'
+    +'<label>客户姓名 <input class="calc-ip" value="'+esc(d.name)+'" oninput="calcSet(\'name\',this.value)"></label>'
+    +'<label>建筑面积(㎡) <input class="calc-ip" value="'+esc(d.area)+'" oninput="calcSet(\'area\',this.value)"></label>'
+    +'<label>设计师 <input class="calc-ip" value="'+esc(d.designer)+'" oninput="calcSet(\'designer\',this.value)"></label>'
+    +'<label>层高(米) <input class="calc-ip" value="'+esc(d.height)+'" oninput="calcSet(\'height\',this.value)"></label>'
     +'</div></div></div>';
   h+='<div class="card"><div class="v17-foldh" onclick="calcToggleFold(\'rooms\')"><span>🗂 空间列表（填面积/周长；吊顶点「＋吊顶」选择、柜子输入了才生成）</span><span class="v17-foldicon">'+(d.fold.rooms?'▼ 收起':'▲ 展开')+'</span></div>'
     +'<div class="v17-foldb"'+(d.fold.rooms?'':' style="display:none"')+'>'
@@ -8168,46 +8189,46 @@ function calcHtml(c){
     +'<label>瓷砖规格 <select onchange="calcSet(\'tileSpec\',this.value)">'+optSel(['300×300','400×400','600×600','600×1200','750×1500','800×800'],d.tileSpec)+'</select></label>'
     +'</div>'
     +'<div class="bar" style="flex-direction:column;gap:6px;margin-top:6px">'
-    +'<label>地砖单价（元/㎡）<input style="width:78px" value="'+esc(d.tilePrice)+'" oninput="calcSet(\'tilePrice\',this.value)"></label>'
-    +'<label>木地板单价（元/㎡）<input style="width:78px" value="'+esc(d.floorPrice)+'" oninput="calcSet(\'floorPrice\',this.value)"></label>'
-    +'<label>定制柜单价（元/㎡投影）<input style="width:78px" value="'+esc(d.cabPrice)+'" oninput="calcSet(\'cabPrice\',this.value)"></label>'
-    +'<label>墙布单价（元/㎡）<input style="width:78px" value="'+esc(d.wbPrice)+'" oninput="calcSet(\'wbPrice\',this.value)"></label>'
+    +'<label>地砖单价（元/㎡）<input class="calc-ip" value="'+esc(d.tilePrice)+'" oninput="calcSet(\'tilePrice\',this.value)"></label>'
+    +'<label>木地板单价（元/㎡）<input class="calc-ip" value="'+esc(d.floorPrice)+'" oninput="calcSet(\'floorPrice\',this.value)"></label>'
+    +'<label>定制柜单价（元/㎡投影）<input class="calc-ip" value="'+esc(d.cabPrice)+'" oninput="calcSet(\'cabPrice\',this.value)"></label>'
+    +'<label>墙布单价（元/㎡）<input class="calc-ip" value="'+esc(d.wbPrice)+'" oninput="calcSet(\'wbPrice\',this.value)"></label>'
     +'<span class="hint" style="width:100%">单价可手动填写并实时估算；个性化项目单价在下方区域各自可改。</span>'
     +'</div></div></div>';
   h+='<div class="card"><div class="v17-foldh" onclick="calcToggleFold(\'opt\')"><span>🎛 个性化选项（默认只露常用项，低频项点「更多」展开）</span><span class="v17-foldicon">'+(d.fold.opt?'▼ 收起':'▲ 展开')+'</span></div>'
     +'<div class="v17-foldb"'+(d.fold.opt?'':' style="display:none"')+'>'
     +'<div class="bar" style="gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:4px"><b style="color:#6b6455">① 施工与搬运</b><span class="hint">常规施工与搬运，建议直接勾选</span></div>'
-    +'<div class="bar" style="gap:14px;flex-wrap:wrap">'
-    +'<label><input type="checkbox" '+(d.opt.mei&&d.opt.mei.on?'checked':'')+' onchange="calcOptObj(\'mei\',\'on\',this.checked)"> 美缝 <input style="width:52px" value="'+(d.opt.mei?d.opt.mei.q:0)+'" oninput="calcOptObj(\'mei\',\'q\',this.value)"> ㎡(0=按铺砖面积) × <input style="width:66px" value="'+(d.opt.mei?d.opt.mei.p:15)+'" oninput="calcOptObj(\'mei\',\'p\',this.value)"> 元</label>'
-    +'<label><input type="checkbox" '+(d.opt.kaihuang&&d.opt.kaihuang.on?'checked':'')+' onchange="calcOptObj(\'kaihuang\',\'on\',this.checked)"> 开荒保洁 <input style="width:52px" value="'+(d.opt.kaihuang?d.opt.kaihuang.q:1)+'" oninput="calcOptObj(\'kaihuang\',\'q\',this.value)"> 项 × <input style="width:66px" value="'+(d.opt.kaihuang?d.opt.kaihuang.p:500)+'" oninput="calcOptObj(\'kaihuang\',\'p\',this.value)"> 元</label>'
-    +'<label><input type="checkbox" '+(d.opt.chengpin&&d.opt.chengpin.on?'checked':'')+' onchange="calcOptObj(\'chengpin\',\'on\',this.checked)"> 成品保护 <input style="width:66px" value="'+(d.opt.chengpin?d.opt.chengpin.p:10)+'" oninput="calcOptObj(\'chengpin\',\'p\',this.value)"> 元/㎡（按铺装面积计，替代固定500）</label>'
-    +'<label><input type="checkbox" '+(d.opt.chanqiang&&d.opt.chanqiang.on?'checked':'')+' onchange="calcOptObj(\'chanqiang\',\'on\',this.checked)"> 铲墙皮/拆除 <input style="width:52px" value="'+(d.opt.chanqiang?d.opt.chanqiang.q:1)+'" oninput="calcOptObj(\'chanqiang\',\'q\',this.value)"> 项 × <input style="width:66px" value="'+(d.opt.chanqiang?d.opt.chanqiang.p:800)+'" oninput="calcOptObj(\'chanqiang\',\'p\',this.value)"> 元</label>'
-    +'<label><input type="checkbox" '+(d.opt.lq&&d.opt.lq.on?'checked':'')+' onchange="calcOptObj(\'lq\',\'on\',this.checked)"> 垃圾清运（二次转运） <input style="width:52px" value="'+(d.opt.lq?d.opt.lq.q:1)+'" oninput="calcOptObj(\'lq\',\'q\',this.value)"> 项 × <input style="width:66px" value="'+(d.opt.lq?d.opt.lq.p:600)+'" oninput="calcOptObj(\'lq\',\'p\',this.value)"> 元</label>'
-    +'<label><input type="checkbox" '+(d.opt.clby&&d.opt.clby.on?'checked':'')+' onchange="calcOptObj(\'clby\',\'on\',this.checked)"> 材料搬运上楼 <input style="width:52px" value="'+(d.opt.clby?d.opt.clby.q:1)+'" oninput="calcOptObj(\'clby\',\'q\',this.value)"> 项 × <input style="width:66px" value="'+(d.opt.clby?d.opt.clby.p:500)+'" oninput="calcOptObj(\'clby\',\'p\',this.value)"> 元</label>'
-    +'<label><input type="checkbox" '+(d.opt.bgl&&d.opt.bgl.on?'checked':'')+' onchange="calcOptObj(\'bgl\',\'on\',this.checked)"> 包立管 <input style="width:52px" value="'+(d.opt.bgl?d.opt.bgl.q:2)+'" oninput="calcOptObj(\'bgl\',\'q\',this.value)"> 根 × <input style="width:66px" value="'+(d.opt.bgl?d.opt.bgl.p:180)+'" oninput="calcOptObj(\'bgl\',\'p\',this.value)"> 元</label>'
-    +'<label><input type="checkbox" '+(d.opt.jiangmen&&d.opt.jiangmen.on?'checked':'')+' onchange="calcOptObj(\'jiangmen\',\'on\',this.checked)"> 降门头 <input style="width:52px" value="'+(d.opt.jiangmen?d.opt.jiangmen.q:0)+'" oninput="calcOptObj(\'jiangmen\',\'q\',this.value)"> 个(0=按房间) × <input style="width:66px" value="'+(d.opt.jiangmen?d.opt.jiangmen.p:100)+'" oninput="calcOptObj(\'jiangmen\',\'p\',this.value)"> 元</label>'
-    +'<label><input type="checkbox" '+(d.opt.jianxiu&&d.opt.jianxiu.on?'checked':'')+' onchange="calcOptObj(\'jianxiu\',\'on\',this.checked)"> 检修口 <input style="width:52px" value="'+(d.opt.jianxiu?d.opt.jianxiu.q:0)+'" oninput="calcOptObj(\'jianxiu\',\'q\',this.value)"> 个(0=按房间) × <input style="width:66px" value="'+(d.opt.jianxiu?d.opt.jianxiu.p:30)+'" oninput="calcOptObj(\'jianxiu\',\'p\',this.value)"> 元</label>'
-    +'<label><input type="checkbox" '+(d.opt.dl&&d.opt.dl.on?'checked':'')+' onchange="calcOptObj(\'dl\',\'on\',this.checked)"> 阳台地漏 <input style="width:52px" value="'+(d.opt.dl?d.opt.dl.q:1)+'" oninput="calcOptObj(\'dl\',\'q\',this.value)"> 个 × <input style="width:66px" value="'+(d.opt.dl?d.opt.dl.p:120)+'" oninput="calcOptObj(\'dl\',\'p\',this.value)"> 元</label>'
+    +'<div class="bar" style="gap:8px;flex-direction:column;align-items:stretch">'
+    +'<label><input type="checkbox" '+(d.opt.mei&&d.opt.mei.on?'checked':'')+' onchange="calcOptObj(\'mei\',\'on\',this.checked)"> <span class="v30-optno">1.</span> 美缝 <input style="width:52px" value="'+(d.opt.mei?d.opt.mei.q:0)+'" oninput="calcOptObj(\'mei\',\'q\',this.value)"> ㎡(0=按铺砖面积) × <input style="width:66px" value="'+(d.opt.mei?d.opt.mei.p:15)+'" oninput="calcOptObj(\'mei\',\'p\',this.value)"> 元</label>'
+    +'<label><input type="checkbox" '+(d.opt.kaihuang&&d.opt.kaihuang.on?'checked':'')+' onchange="calcOptObj(\'kaihuang\',\'on\',this.checked)"> <span class="v30-optno">2.</span> 开荒保洁 <input style="width:52px" value="'+(d.opt.kaihuang?d.opt.kaihuang.q:1)+'" oninput="calcOptObj(\'kaihuang\',\'q\',this.value)"> 项 × <input style="width:66px" value="'+(d.opt.kaihuang?d.opt.kaihuang.p:500)+'" oninput="calcOptObj(\'kaihuang\',\'p\',this.value)"> 元</label>'
+    +'<label><input type="checkbox" '+(d.opt.chengpin&&d.opt.chengpin.on?'checked':'')+' onchange="calcOptObj(\'chengpin\',\'on\',this.checked)"> <span class="v30-optno">3.</span> 成品保护 <input style="width:66px" value="'+(d.opt.chengpin?d.opt.chengpin.p:10)+'" oninput="calcOptObj(\'chengpin\',\'p\',this.value)"> 元/㎡（按铺装面积计，替代固定500）</label>'
+    +'<label><input type="checkbox" '+(d.opt.chanqiang&&d.opt.chanqiang.on?'checked':'')+' onchange="calcOptObj(\'chanqiang\',\'on\',this.checked)"> <span class="v30-optno">4.</span> 铲墙皮/拆除 <input style="width:52px" value="'+(d.opt.chanqiang?d.opt.chanqiang.q:1)+'" oninput="calcOptObj(\'chanqiang\',\'q\',this.value)"> 项 × <input style="width:66px" value="'+(d.opt.chanqiang?d.opt.chanqiang.p:800)+'" oninput="calcOptObj(\'chanqiang\',\'p\',this.value)"> 元</label>'
+    +'<label><input type="checkbox" '+(d.opt.lq&&d.opt.lq.on?'checked':'')+' onchange="calcOptObj(\'lq\',\'on\',this.checked)"> <span class="v30-optno">5.</span> 垃圾清运（二次转运） <input style="width:52px" value="'+(d.opt.lq?d.opt.lq.q:1)+'" oninput="calcOptObj(\'lq\',\'q\',this.value)"> 项 × <input style="width:66px" value="'+(d.opt.lq?d.opt.lq.p:600)+'" oninput="calcOptObj(\'lq\',\'p\',this.value)"> 元</label>'
+    +'<label><input type="checkbox" '+(d.opt.clby&&d.opt.clby.on?'checked':'')+' onchange="calcOptObj(\'clby\',\'on\',this.checked)"> <span class="v30-optno">6.</span> 材料搬运上楼 <input style="width:52px" value="'+(d.opt.clby?d.opt.clby.q:1)+'" oninput="calcOptObj(\'clby\',\'q\',this.value)"> 项 × <input style="width:66px" value="'+(d.opt.clby?d.opt.clby.p:500)+'" oninput="calcOptObj(\'clby\',\'p\',this.value)"> 元</label>'
+    +'<label><input type="checkbox" '+(d.opt.bgl&&d.opt.bgl.on?'checked':'')+' onchange="calcOptObj(\'bgl\',\'on\',this.checked)"> <span class="v30-optno">7.</span> 包立管 <input style="width:52px" value="'+(d.opt.bgl?d.opt.bgl.q:2)+'" oninput="calcOptObj(\'bgl\',\'q\',this.value)"> 根 × <input style="width:66px" value="'+(d.opt.bgl?d.opt.bgl.p:180)+'" oninput="calcOptObj(\'bgl\',\'p\',this.value)"> 元</label>'
+    +'<label><input type="checkbox" '+(d.opt.jiangmen&&d.opt.jiangmen.on?'checked':'')+' onchange="calcOptObj(\'jiangmen\',\'on\',this.checked)"> <span class="v30-optno">8.</span> 降门头 <input style="width:52px" value="'+(d.opt.jiangmen?d.opt.jiangmen.q:0)+'" oninput="calcOptObj(\'jiangmen\',\'q\',this.value)"> 个(0=按房间) × <input style="width:66px" value="'+(d.opt.jiangmen?d.opt.jiangmen.p:100)+'" oninput="calcOptObj(\'jiangmen\',\'p\',this.value)"> 元</label>'
+    +'<label><input type="checkbox" '+(d.opt.jianxiu&&d.opt.jianxiu.on?'checked':'')+' onchange="calcOptObj(\'jianxiu\',\'on\',this.checked)"> <span class="v30-optno">9.</span> 检修口 <input style="width:52px" value="'+(d.opt.jianxiu?d.opt.jianxiu.q:0)+'" oninput="calcOptObj(\'jianxiu\',\'q\',this.value)"> 个(0=按房间) × <input style="width:66px" value="'+(d.opt.jianxiu?d.opt.jianxiu.p:30)+'" oninput="calcOptObj(\'jianxiu\',\'p\',this.value)"> 元</label>'
+    +'<label><input type="checkbox" '+(d.opt.dl&&d.opt.dl.on?'checked':'')+' onchange="calcOptObj(\'dl\',\'on\',this.checked)"> <span class="v30-optno">10.</span> 阳台地漏 <input style="width:52px" value="'+(d.opt.dl?d.opt.dl.q:1)+'" oninput="calcOptObj(\'dl\',\'q\',this.value)"> 个 × <input style="width:66px" value="'+(d.opt.dl?d.opt.dl.p:120)+'" oninput="calcOptObj(\'dl\',\'p\',this.value)"> 元</label>'
     +'</div>'
     +'<div class="bar" style="gap:10px;flex-wrap:wrap;align-items:center;margin-top:8px"><b style="color:#6b6455">② 水暖空调</b><span class="hint">按需勾选</span></div>'
-    +'<div class="bar" style="gap:14px;flex-wrap:wrap">'
-    +'<label><input type="checkbox" '+(d.opt.dh&&d.opt.dh.on?'checked':'')+' onchange="calcOptObj(\'dh\',\'on\',this.checked)"> 地暖 <input style="width:66px" value="'+(d.opt.dh?d.opt.dh.p:160)+'" oninput="calcOptObj(\'dh\',\'p\',this.value)"> 元/㎡（按铺砖面积）</label>'
-    +'<label><input type="checkbox" '+(d.opt.air&&d.opt.air.on?'checked':'')+' onchange="calcOptObj(\'air\',\'on\',this.checked)"> 中央空调 <input style="width:66px" value="'+(d.opt.air?d.opt.air.p:3800)+'" oninput="calcOptObj(\'air\',\'p\',this.value)"> 元/台（按房间数）</label>'
-    +'<label><input type="checkbox" '+(d.opt.water&&d.opt.water.on?'checked':'')+' onchange="calcOptObj(\'water\',\'on\',this.checked)"> 全屋净水 <input style="width:52px" value="'+(d.opt.water?d.opt.water.q:1)+'" oninput="calcOptObj(\'water\',\'q\',this.value)"> 套 × <input style="width:66px" value="'+(d.opt.water?d.opt.water.p:3800)+'" oninput="calcOptObj(\'water\',\'p\',this.value)"> 元</label>'
-    +'<label><input type="checkbox" '+(d.opt.airfresh&&d.opt.airfresh.on?'checked':'')+' onchange="calcOptObj(\'airfresh\',\'on\',this.checked)"> 新风系统 <input style="width:52px" value="'+(d.opt.airfresh?d.opt.airfresh.q:1)+'" oninput="calcOptObj(\'airfresh\',\'q\',this.value)"> 套 × <input style="width:66px" value="'+(d.opt.airfresh?d.opt.airfresh.p:12000)+'" oninput="calcOptObj(\'airfresh\',\'p\',this.value)"> 元</label>'
-    +'<label><input type="checkbox" '+(d.opt.sswitch&&d.opt.sswitch.on?'checked':'')+' onchange="calcOptObj(\'sswitch\',\'on\',this.checked)"> 智能开关 <input style="width:52px" value="'+(d.opt.sswitch?d.opt.sswitch.q:0)+'" oninput="calcOptObj(\'sswitch\',\'q\',this.value)"> 个(0=按房间) × <input style="width:66px" value="'+(d.opt.sswitch?d.opt.sswitch.p:80)+'" oninput="calcOptObj(\'sswitch\',\'p\',this.value)"> 元</label>'
-    +'<label><input type="checkbox" '+(d.opt.fs&&d.opt.fs.on?'checked':'')+' onchange="calcOptObj(\'fs\',\'on\',this.checked)"> 卫生间防水升级 <input style="width:52px" value="'+(d.opt.fs?d.opt.fs.q:1)+'" oninput="calcOptObj(\'fs\',\'q\',this.value)"> 间 × <input style="width:66px" value="'+(d.opt.fs?d.opt.fs.p:600)+'" oninput="calcOptObj(\'fs\',\'p\',this.value)"> 元</label>'
+    +'<div class="bar" style="gap:8px;flex-direction:column;align-items:stretch">'
+    +'<label><input type="checkbox" '+(d.opt.dh&&d.opt.dh.on?'checked':'')+' onchange="calcOptObj(\'dh\',\'on\',this.checked)"> <span class="v30-optno">1.</span> 地暖 <input style="width:66px" value="'+(d.opt.dh?d.opt.dh.p:160)+'" oninput="calcOptObj(\'dh\',\'p\',this.value)"> 元/㎡（按铺砖面积）</label>'
+    +'<label><input type="checkbox" '+(d.opt.air&&d.opt.air.on?'checked':'')+' onchange="calcOptObj(\'air\',\'on\',this.checked)"> <span class="v30-optno">2.</span> 中央空调 <input style="width:66px" value="'+(d.opt.air?d.opt.air.p:3800)+'" oninput="calcOptObj(\'air\',\'p\',this.value)"> 元/台（按房间数）</label>'
+    +'<label><input type="checkbox" '+(d.opt.water&&d.opt.water.on?'checked':'')+' onchange="calcOptObj(\'water\',\'on\',this.checked)"> <span class="v30-optno">3.</span> 全屋净水 <input style="width:52px" value="'+(d.opt.water?d.opt.water.q:1)+'" oninput="calcOptObj(\'water\',\'q\',this.value)"> 套 × <input style="width:66px" value="'+(d.opt.water?d.opt.water.p:3800)+'" oninput="calcOptObj(\'water\',\'p\',this.value)"> 元</label>'
+    +'<label><input type="checkbox" '+(d.opt.airfresh&&d.opt.airfresh.on?'checked':'')+' onchange="calcOptObj(\'airfresh\',\'on\',this.checked)"> <span class="v30-optno">4.</span> 新风系统 <input style="width:52px" value="'+(d.opt.airfresh?d.opt.airfresh.q:1)+'" oninput="calcOptObj(\'airfresh\',\'q\',this.value)"> 套 × <input style="width:66px" value="'+(d.opt.airfresh?d.opt.airfresh.p:12000)+'" oninput="calcOptObj(\'airfresh\',\'p\',this.value)"> 元</label>'
+    +'<label><input type="checkbox" '+(d.opt.sswitch&&d.opt.sswitch.on?'checked':'')+' onchange="calcOptObj(\'sswitch\',\'on\',this.checked)"> <span class="v30-optno">5.</span> 智能开关 <input style="width:52px" value="'+(d.opt.sswitch?d.opt.sswitch.q:0)+'" oninput="calcOptObj(\'sswitch\',\'q\',this.value)"> 个(0=按房间) × <input style="width:66px" value="'+(d.opt.sswitch?d.opt.sswitch.p:80)+'" oninput="calcOptObj(\'sswitch\',\'p\',this.value)"> 元</label>'
+    +'<label><input type="checkbox" '+(d.opt.fs&&d.opt.fs.on?'checked':'')+' onchange="calcOptObj(\'fs\',\'on\',this.checked)"> <span class="v30-optno">6.</span> 卫生间防水升级 <input style="width:52px" value="'+(d.opt.fs?d.opt.fs.q:1)+'" oninput="calcOptObj(\'fs\',\'q\',this.value)"> 间 × <input style="width:66px" value="'+(d.opt.fs?d.opt.fs.p:600)+'" oninput="calcOptObj(\'fs\',\'p\',this.value)"> 元</label>'
     +'</div>'
     +'<div class="bar" style="gap:14px;flex-wrap:wrap;margin-top:8px;cursor:pointer" onclick="calcToggleFold(\'opt\')"><b style="color:#6b6455">'+(d.fold.opt?'▼ 收起':'＋ 更多（主材收口与石材类）')+'</b></div>'
     +'<div class="bar" style="gap:14px;flex-wrap:wrap"'+(d.fold.opt?'':' style="display:none"')+'>'
     +'<div class="bar" style="gap:10px;flex-wrap:wrap;align-items:center"><b style="color:#6b6455">③ 主材与收口</b><span class="hint">按需勾选</span></div>'
-    +'<div class="bar" style="gap:14px;flex-wrap:wrap">'
-    +'<label><input type="checkbox" '+(d.opt.swp&&d.opt.swp.on?'checked':'')+' onchange="calcOptObj(\'swp\',\'on\',this.checked)"> 开关面板 <input style="width:52px" value="'+(d.opt.swp?d.opt.swp.q:0)+'" oninput="calcOptObj(\'swp\',\'q\',this.value)"> 个(0=按房间) × <input style="width:66px" value="'+(d.opt.swp?d.opt.swp.p:90)+'" oninput="calcOptObj(\'swp\',\'p\',this.value)"> 元</label>'
-    +'<label><input type="checkbox" '+(d.opt.wb&&d.opt.wb.on?'checked':'')+' onchange="calcOptObj(\'wb\',\'on\',this.checked)"> 全屋墙布 <input style="width:66px" value="'+(d.opt.wb?d.opt.wb.p:num0(d.wbPrice))+'" oninput="calcOptObj(\'wb\',\'p\',this.value)"> 元/㎡（按墙面面积）</label>'
-    +'<label><input type="checkbox" '+(d.opt.beijing&&d.opt.beijing.on?'checked':'')+' onchange="calcOptObj(\'beijing\',\'on\',this.checked)"> 背景墙 <input style="width:52px" value="'+(d.opt.beijing?d.opt.beijing.q:0)+'" oninput="calcOptObj(\'beijing\',\'q\',this.value)"> ㎡ × <input style="width:66px" value="'+(d.opt.beijing?d.opt.beijing.p:650)+'" oninput="calcOptObj(\'beijing\',\'p\',this.value)"> 元</label>'
-    +'<label>封阳台/封窗 <input style="width:70px" value="'+esc(d.opt.balcony)+'" oninput="calcOptNum(\'balcony\',this.value)"> ㎡ × 480元/㎡</label>'
-    +'<label><input type="checkbox" '+(d.opt.cts&&d.opt.cts.on?'checked':'')+' onchange="calcOptObj(\'cts\',\'on\',this.checked)"> 窗台石 <input style="width:52px" value="'+(d.opt.cts?d.opt.cts.q:8)+'" oninput="calcOptObj(\'cts\',\'q\',this.value)"> 米 × <input style="width:66px" value="'+(d.opt.cts?d.opt.cts.p:80)+'" oninput="calcOptObj(\'cts\',\'p\',this.value)"> 元</label>'
-    +'<label><input type="checkbox" '+(d.opt.gms&&d.opt.gms.on?'checked':'')+' onchange="calcOptObj(\'gms\',\'on\',this.checked)"> 过门石 <input style="width:52px" value="'+(d.opt.gms?d.opt.gms.q:0)+'" oninput="calcOptObj(\'gms\',\'q\',this.value)"> 个(0=按房间) × <input style="width:66px" value="'+(d.opt.gms?d.opt.gms.p:80)+'" oninput="calcOptObj(\'gms\',\'p\',this.value)"> 元</label>'
+    +'<div class="bar" style="gap:8px;flex-direction:column;align-items:stretch">'
+    +'<label><input type="checkbox" '+(d.opt.swp&&d.opt.swp.on?'checked':'')+' onchange="calcOptObj(\'swp\',\'on\',this.checked)"> <span class="v30-optno">1.</span> 开关面板 <input style="width:52px" value="'+(d.opt.swp?d.opt.swp.q:0)+'" oninput="calcOptObj(\'swp\',\'q\',this.value)"> 个(0=按房间) × <input style="width:66px" value="'+(d.opt.swp?d.opt.swp.p:90)+'" oninput="calcOptObj(\'swp\',\'p\',this.value)"> 元</label>'
+    +'<label><input type="checkbox" '+(d.opt.wb&&d.opt.wb.on?'checked':'')+' onchange="calcOptObj(\'wb\',\'on\',this.checked)"> <span class="v30-optno">2.</span> 全屋墙布 <input style="width:66px" value="'+(d.opt.wb?d.opt.wb.p:num0(d.wbPrice))+'" oninput="calcOptObj(\'wb\',\'p\',this.value)"> 元/㎡（按墙面面积）</label>'
+    +'<label><input type="checkbox" '+(d.opt.beijing&&d.opt.beijing.on?'checked':'')+' onchange="calcOptObj(\'beijing\',\'on\',this.checked)"> <span class="v30-optno">3.</span> 背景墙 <input style="width:52px" value="'+(d.opt.beijing?d.opt.beijing.q:0)+'" oninput="calcOptObj(\'beijing\',\'q\',this.value)"> ㎡ × <input style="width:66px" value="'+(d.opt.beijing?d.opt.beijing.p:650)+'" oninput="calcOptObj(\'beijing\',\'p\',this.value)"> 元</label>'
+    +'<label><span class="v30-optno">4.</span>封阳台/封窗 <input style="width:70px" value="'+esc(d.opt.balcony)+'" oninput="calcOptNum(\'balcony\',this.value)"> ㎡ × 480元/㎡</label>'
+    +'<label><input type="checkbox" '+(d.opt.cts&&d.opt.cts.on?'checked':'')+' onchange="calcOptObj(\'cts\',\'on\',this.checked)"> <span class="v30-optno">5.</span> 窗台石 <input style="width:52px" value="'+(d.opt.cts?d.opt.cts.q:8)+'" oninput="calcOptObj(\'cts\',\'q\',this.value)"> 米 × <input style="width:66px" value="'+(d.opt.cts?d.opt.cts.p:80)+'" oninput="calcOptObj(\'cts\',\'p\',this.value)"> 元</label>'
+    +'<label><input type="checkbox" '+(d.opt.gms&&d.opt.gms.on?'checked':'')+' onchange="calcOptObj(\'gms\',\'on\',this.checked)"> <span class="v30-optno">6.</span> 过门石 <input style="width:52px" value="'+(d.opt.gms?d.opt.gms.q:0)+'" oninput="calcOptObj(\'gms\',\'q\',this.value)"> 个(0=按房间) × <input style="width:66px" value="'+(d.opt.gms?d.opt.gms.p:80)+'" oninput="calcOptObj(\'gms\',\'p\',this.value)"> 元</label>'
     +'</div>'
     +'<span class="hint" style="margin-left:4px">定制柜与双眼皮吊顶已并入上方空间列表按房间填写；数量填 0 时自动按房间数推导；勾选即自动计入估算与生成报价。</span>'
     +'<div class="bar" style="gap:10px;flex-wrap:wrap;margin-top:8px;align-items:center"><b style="color:#6b6455">④ 自定义项目</b><button class="btn mini brand" onclick="calcAddCustom()">＋ 添加自定义项</button><span class="hint">自定义项勾选后计入估算与报价（综合费），名称/数量/单价均可改。</span></div>'
